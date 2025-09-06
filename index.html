@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AxFocus Timer</title>
+  <style>
+    :root{
+      --bg:#0f1220;--fg:#e9ecf1;--muted:#9aa3b2;--accent:#7c5cff;--accent-2:#18c3ff;--danger:#ff4d67;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,"Helvetica Neue",Arial,sans-serif;
+      background: url('photo_6188331855699363393_w.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color:var(--fg);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .wrap{width:min(950px,92vw); background:rgba(15,18,32,0.7); padding:20px; border-radius:20px;}
+    .app{display:grid;grid-template-columns:1fr;gap:18px}
+
+    .app-title{text-align:center;font-size:clamp(18px,3vw,26px);font-weight:700;color:var(--accent-2);margin-bottom:10px;}
+
+    .clock-row{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    .clock{font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:0.02em}
+    .clock .big{font-size:clamp(18px,2.6vw,28px)}
+    .clock .zone{font-size:clamp(12px,1.6vw,14px);color:var(--muted)}
+
+    .timer{user-select:none;text-align:center;padding:12px 0}
+    .timer-display{font-variant-numeric:tabular-nums;line-height:1;letter-spacing:0.02em;font-weight:800;
+      font-size:clamp(56px,16vw,220px); text-shadow:0 8px 40px rgba(0,0,0,.7)}
+    .sub{color:var(--muted);font-size:clamp(12px,2.2vw,18px)}
+
+    .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+    button, .field, .option, textarea{background:#151833cc;border:1px solid #2a2f55;color:var(--fg);padding:12px 16px;border-radius:14px;font-weight:600;letter-spacing:.3px}
+    button{cursor:pointer;transition:transform .05s ease, background .2s ease,border-color .2s ease}
+    button:hover{transform:translateY(-1px)}
+    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border:0;color:white}
+    button.danger{background:linear-gradient(135deg,#ff6a88,var(--danger));border:0}
+    .field{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px}
+    input{background:transparent;border:0;outline:none;color:var(--fg);width:7ch;font-variant-numeric:tabular-nums;font-size:16px;text-align:center}
+
+    .tips{color:var(--muted);text-align:center;font-size:clamp(11px,1.8vw,14px)}
+    .pill{border:1px solid #2a2f55;border-radius:999px;padding:4px 8px;margin:0 4px}
+
+    .blink{animation:blink 1s step-end infinite}
+    @keyframes blink{50%{opacity:0.25}}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:100}
+    .modal-content{background:#1a1d3a;padding:20px;border-radius:16px;box-shadow:0 0 20px rgba(0,0,0,.5);text-align:center;max-width:400px;width:90%}
+    .modal-content h2{margin-top:0;color:var(--fg)}
+    .close{cursor:pointer;color:var(--muted);float:right;font-size:20px;margin-top:-10px}
+    .close:hover{color:var(--fg)}
+    .option{cursor:pointer;margin-top:10px}
+    textarea{width:100%;min-height:80px;margin-top:10px;resize:vertical;font-size:14px;font-weight:400}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="app">
+      <div class="app-title">AxFocus Timer</div>
+      <!-- Real-Time Clock Row -->
+      <div class="clock-row">
+        <div class="clock">
+          <span class="big" id="nowTime">00:00:00</span>
+          <span class="zone" id="nowDate">—</span>
+        </div>
+      </div>
+
+      <!-- Timer Display -->
+      <div class="timer" id="timerArea">
+        <div class="timer-display" id="display">25:00</div>
+        <div class="sub" id="status">Ready</div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button id="settingsBtn">⚙️</button>
+        <button class="primary" id="start">Start</button>
+        <button id="pause">Pause</button>
+        <button id="reset" class="danger">Reset</button>
+        <button id="fullscreen">Fullscreen</button>
+        <button id="mute">🔊</button>
+      </div>
+
+      <!-- Notes Area -->
+      <div class="notes">
+        <textarea id="notes" placeholder="Write your study/task notes here..."></textarea>
+      </div>
+
+      <div class="tips">
+        Shortcuts: <span class="pill">Space</span> start/pause •
+        <span class="pill">R</span> reset • <span class="pill">F</span> fullscreen •
+        <span class="pill">U</span> up/down mode • <span class="pill">M</span> mute •
+        Use ⚙️ to set time / mode.
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Settings -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <h2>Settings</h2>
+      <div class="field" title="Minutes:Seconds">
+        <input id="minutes" type="number" min="0" value="25" aria-label="Minutes" /> :
+        <input id="seconds" type="number" min="0" max="59" value="0" aria-label="Seconds" />
+        <button id="apply">Apply</button>
+      </div>
+      <div class="option" id="toggleModeOption">Switch to Count Up</div>
+    </div>
+  </div>
+
+  <!-- Beep sound -->
+  <audio id="beep">
+    <source src="beep.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // === Utilities ===
+    const pad = (n)=> String(n).padStart(2,'0');
+
+    function fmt(ms){
+      const s = Math.max(0, Math.floor(ms/1000));
+      const hh = Math.floor(s/3600);
+      const mm = Math.floor((s%3600)/60);
+      const ss = s%60;
+      return (hh? pad(hh)+':':'') + pad(mm)+":"+pad(ss);
+    }
+
+    function setDisplay(ms){
+      display.textContent = fmt(ms);
+    }
+
+    // === Clock (Real-Time) ===
+    function updateClock(){
+      const d = new Date();
+      const time = pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+      const date = d.toLocaleDateString(undefined,{weekday:'short', year:'numeric', month:'short', day:'numeric'});
+      nowTime.textContent = time;
+      nowDate.textContent = date;
+    }
+    setInterval(updateClock, 250);
+    updateClock();
+
+    // === Timer Logic ===
+    const display = document.getElementById('display');
+    const statusEl = document.getElementById('status');
+    const minutes = document.getElementById('minutes');
+    const seconds = document.getElementById('seconds');
+    const startBtn = document.getElementById('start');
+    const pauseBtn = document.getElementById('pause');
+    const resetBtn = document.getElementById('reset');
+    const fsBtn = document.getElementById('fullscreen');
+    const applyBtn = document.getElementById('apply');
+    const muteBtn = document.getElementById('mute');
+    const beep = document.getElementById('beep');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeModal = document.getElementById('closeModal');
+    const toggleModeOption = document.getElementById('toggleModeOption');
+    const notes = document.getElementById('notes');
+
+    let mode = 'down'; // 'down' | 'up'
+    let totalMs = (Number(minutes.value)*60 + Number(seconds.value))*1000;
+    let startTime = null;
+    let elapsed = 0;
+    let ticking = false;
+    let rafId = null;
+    let muted = false;
+
+    function applyTime(){
+      const m = Math.max(0, Number(minutes.value)||0);
+      const s = Math.max(0, Math.min(59, Number(seconds.value)||0));
+      totalMs = (m*60+s)*1000;
+      elapsed = 0;
+      setDisplay(totalMs);
+      statusEl.textContent = 'Ready';
+      settingsModal.style.display = 'none';
+    }
+
+    function tick(){
+      if(!ticking) return;
+      const now = performance.now();
+      const dt = now - startTime;
+      const ms = mode==='down' ? Math.max(0, totalMs - (elapsed + dt)) : (elapsed + dt);
+      setDisplay(ms);
+
+      if(mode==='down' && ms === 0){
+        stop(true);
+        if(!muted){ 
+          try{beep.currentTime=0;beep.play();}catch(e){console.error('Beep error', e);} 
+        }
+        display.classList.add('blink');
+        statusEl.textContent = 'Time\'s up';
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function start(){
+      if(ticking) return;
+      display.classList.remove('blink');
+      if(mode==='down' && totalMs===0){statusEl.textContent='Set a time first';return}
+      ticking = true; startTime = performance.now();
+      statusEl.textContent = 'Running';
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function pause(){
+      if(!ticking) return;
+      ticking = false;
+      cancelAnimationFrame(rafId);
+      const now = performance.now();
+      elapsed += now - startTime;
+      statusEl.textContent = 'Paused';
+    }
+
+    function stop(final=false){
+      ticking = false; cancelAnimationFrame(rafId);
+      if(!final){
+        const now = performance.now();
+        elapsed += now - startTime;
+      }
+    }
+
+    function reset(){
+      stop(); elapsed = 0; display.classList.remove('blink');
+      if(mode==='down'){ setDisplay(totalMs); }
+      else { setDisplay(0); }
+      statusEl.textContent = 'Ready';
+    }
+
+    function toggleMode(){
+      const wasRunning = ticking; if(wasRunning) pause();
+      mode = mode==='down' ? 'up' : 'down';
+      toggleModeOption.textContent = (mode==='down') ? 'Switch to Count Up' : 'Switch to Count Down';
+      elapsed = 0; display.classList.remove('blink');
+      if(mode==='down') setDisplay(totalMs); else setDisplay(0);
+      statusEl.textContent = 'Ready';
+      if(wasRunning) start();
+    }
+
+    // === Save Notes ===
+    notes.value = localStorage.getItem('studyNotes') || '';
+    notes.addEventListener('input', ()=>{
+      localStorage.setItem('studyNotes', notes.value);
+    });
+
+    // === Event bindings ===
+    applyBtn.addEventListener('click', applyTime);
+    startBtn.addEventListener('click', start);
+    pauseBtn.addEventListener('click', pause);
+    resetBtn.addEventListener('click', reset);
+    toggleModeOption.addEventListener('click', toggleMode);
+    settingsBtn.addEventListener('click', ()=>{settingsModal.style.display='flex'});
+    closeModal.addEventListener('click', ()=>{settingsModal.style.display='none'});
+
+    muteBtn.addEventListener('click', ()=>{
+      muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊';
+    });
+
+    fsBtn.addEventListener('click', ()=>{
+      const el = document.documentElement;
+      if(!document.fullscreenElement){ el.requestFullscreen().catch(()=>{}); }
+      else { document.exitFullscreen(); }
+    });
+
+    // Removed auto-open on display click
+
+    window.addEventListener('keydown', (e)=>{
+      if(e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA') return;
+      if(e.code==='Space'){ e.preventDefault(); ticking ? pause() : start(); }
+      else if(e.key==='r' || e.key==='R'){ reset(); }
+      else if(e.key==='f' || e.key==='F'){ fsBtn.click(); }
+      else if(e.key==='u' || e.key==='U'){ toggleMode(); }
+      else if(e.key==='m' || e.key==='M'){ muteBtn.click(); }
+    });
+
+    applyTime();
+  </script>
+</body>
+</html>
